@@ -1,9 +1,16 @@
 """Single-image inference against the trained candlestick model."""
 
+import os
+
 from src.model import load_model
 from src.preprocessing import preprocess_image
 
-DEFAULT_MODEL_PATH = "models/candlestick_model.h5"
+# .keras (native Keras 3 format) rather than .h5: legacy H5 full-model saving
+# hits a "cannot pickle 'module' object" error partway through in this
+# Keras/TF version (a known Keras 3 legacy-H5 serialization issue), and
+# save_format="tf" SavedModel export was removed outright ("deprecated in
+# Keras 3"). .keras is the actively-maintained native format.
+DEFAULT_MODEL_PATH = os.environ.get("MODEL_PATH", "models/candlestick_model.keras")
 CLASS_NAMES = ["Down", "Up"]  # sigmoid output: 0 -> Down, 1 -> Up
 
 _cached_model = None
