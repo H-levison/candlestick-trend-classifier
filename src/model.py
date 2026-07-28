@@ -19,8 +19,13 @@ def build_model(img_size=IMG_SIZE, dropout_rate=0.5, learning_rate=1e-3, unfreez
 
     inputs = tf.keras.Input(shape=img_size + (3,))
     x = get_augmentation_layer()(inputs)
-    x = tf.keras.layers.Lambda(
-        tf.keras.applications.mobilenet_v2.preprocess_input, name="mobilenetv2_preprocess"
+    # Equivalent to mobilenet_v2.preprocess_input's default "tf" mode
+    # (x/127.5 - 1 -> [-1, 1]), as a native Rescaling layer instead of a
+    # Lambda wrapping an imported function -- Lambda holds a raw reference
+    # to the function's module, which isn't deep-copyable/picklable and
+    # breaks partway through training in this TF/Keras version.
+    x = tf.keras.layers.Rescaling(
+        scale=1.0 / 127.5, offset=-1.0, name="mobilenetv2_preprocess"
     )(x)
     x = base(x, training=unfreeze_base)
     x = tf.keras.layers.GlobalAveragePooling2D()(x)
