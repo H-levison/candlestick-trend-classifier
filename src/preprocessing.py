@@ -9,7 +9,6 @@ import tensorflow as tf
 
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 32
-CLASS_NAMES = ["Down", "Up"]  # alphabetical, matches image_dataset_from_directory default
 
 
 def load_datasets(train_dir, test_dir, img_size=IMG_SIZE, batch_size=BATCH_SIZE, val_split=0.2, seed=42):

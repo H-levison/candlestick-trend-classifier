@@ -1,0 +1,8 @@
+.git/
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+*.log
+nbconvert_log*.txt
+.env
