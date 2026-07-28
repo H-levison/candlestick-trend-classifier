@@ -25,7 +25,13 @@ API_URL = os.environ.get("API_URL", "http://localhost:8000")
 TRAIN_DIR = "data/train"
 
 st.set_page_config(page_title="Crypto Candlestick Classifier", layout="wide")
-st.title("Crypto Candlestick Up/Down Classifier")
+st.title("Crypto Candlestick Trend Pattern Classifier")
+st.caption(
+    "Classifies whether a candlestick chart image visually shows a rising "
+    "(\"Up\") or falling (\"Down\") trend across the candles drawn in the "
+    "image itself -- a visual pattern-recognition task, not a forecast of "
+    "where the price goes next."
+)
 
 tab1, tab2, tab3, tab4 = st.tabs(
     ["Single Prediction", "Data Insights", "Bulk Upload & Retrain", "Model Status & Uptime"]
@@ -96,13 +102,15 @@ with tab2:
             "(check the volume mount if running in Docker)."
         )
     else:
-        st.markdown("**1. Color Channel Dominance** — Bullish (Up) vs Bearish (Down)")
+        st.markdown("**1. Color Channel Dominance** — visually rising vs falling images")
         fig1, means = plot_color_channel_dominance(paths)
         st.pyplot(fig1)
         st.caption(
-            "If up-candles render green and down-candles render red, the Up bars "
-            "should skew green and Down bars should skew red -- a direct visual "
-            "cue the model can exploit alongside candle shape."
+            "Bullish (green) candles push price up, bearish (red) candles push it "
+            "down, so an image with an overall rising visual trend should tend to "
+            "contain more green candles, and vice versa -- the Up bars should skew "
+            "green and Down bars should skew red, a direct visual cue the model can "
+            "exploit alongside candle shape."
         )
 
         st.markdown("**2. Edge Detection** — isolating candle wicks and bodies")
@@ -131,6 +139,10 @@ with tab2:
 with tab3:
     st.subheader("Bulk Upload New Training Data")
     label = st.selectbox("Label for this batch", ["Up", "Down"])
+    st.caption(
+        "Label by what the chart image itself visually shows: \"Up\" if the "
+        "candles trend upward left-to-right, \"Down\" if they trend downward."
+    )
     bulk_files = st.file_uploader(
         "Upload multiple chart images",
         type=["png", "jpg", "jpeg"],
