@@ -1,0 +1,45 @@
+services:
+  api:
+    build: .
+    command: uvicorn src.api:app --host 0.0.0.0 --port 8000
+    expose:
+      - "8000"
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+    environment:
+      - MODEL_PATH=/app/models/candlestick_model.h5
+
+  # Fixed public gateway on host port 8000. Re-resolves the "api" service name
+  # on every request, so it load-balances across however many api replicas are
+  # running (see README "Locust Flood Simulation" section for --scale usage).
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8000:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+
+  ui:
+    build: .
+    command: streamlit run ui/app.py --server.port 8501 --server.address 0.0.0.0
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data:ro
+    environment:
+      - API_URL=http://nginx:80
+    depends_on:
+      - nginx
+
+  # Not started by `docker-compose up`. Run explicitly for the flood test, e.g.:
+  #   docker-compose --profile loadtest run --rm locust \
+  #     -f locustfile.py --host http://nginx:80 --headless -u 100 -r 10 -t 60s
+  locust:
+    build: .
+    profiles: ["loadtest"]
+    entrypoint: locust
+    depends_on:
+      - nginx
