@@ -8,7 +8,7 @@ services:
       - ./data:/app/data
       - ./models:/app/models
     environment:
-      - MODEL_PATH=/app/models/candlestick_model.h5
+      - MODEL_PATH=/app/models/candlestick_model.keras
 
   # Fixed public gateway on host port 8000. Re-resolves the "api" service name
   # on every request, so it load-balances across however many api replicas are

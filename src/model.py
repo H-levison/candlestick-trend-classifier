@@ -45,6 +45,35 @@ def build_model(img_size=IMG_SIZE, dropout_rate=0.5, learning_rate=1e-3, unfreez
     return model
 
 
+def get_base_layer(model):
+    """Finds the nested MobileNetV2 backbone layer generically (by type,
+    not by its auto-generated name, which isn't stable across instantiations
+    in the same process)."""
+    for layer in model.layers:
+        if isinstance(layer, tf.keras.Model):
+            return layer
+    raise ValueError("No nested base-model layer found")
+
+
+def unfreeze_and_recompile(model, learning_rate=1e-5):
+    """Unfreezes the MobileNetV2 backbone for end-to-end fine-tuning.
+    Frozen ImageNet features alone don't transfer to synthetic candlestick
+    chart images -- head-only training plateaus at the majority-class
+    baseline (see notebook). Recompiling is required for a trainable-flag
+    change on an already-built model to actually take effect."""
+    get_base_layer(model).trainable = True
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
+        loss="binary_crossentropy",
+        metrics=[
+            "accuracy",
+            tf.keras.metrics.Precision(name="precision"),
+            tf.keras.metrics.Recall(name="recall"),
+        ],
+    )
+    return model
+
+
 def get_early_stopping(patience=3):
     return tf.keras.callbacks.EarlyStopping(
         monitor="val_loss", patience=patience, restore_best_weights=True
@@ -102,7 +131,7 @@ def retrain(model_path, train_dir, test_dir, epochs=5, learning_rate=1e-5, patie
 
     before_metrics, *_ = evaluate_model(model, test_ds)
 
-    model.optimizer.learning_rate.assign(learning_rate)
+    unfreeze_and_recompile(model, learning_rate=learning_rate)
     train_model(model, train_ds, val_ds, epochs=epochs, patience=patience)
 
     after_metrics, *_ = evaluate_model(model, test_ds)
