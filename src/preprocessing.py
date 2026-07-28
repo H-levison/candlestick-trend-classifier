@@ -90,6 +90,51 @@ def preprocess_image(image_path_or_bytes, img_size=IMG_SIZE):
 
 
 # ---------------------------------------------------------------------------
+# Visual-trend labeling
+# ---------------------------------------------------------------------------
+
+ALPHA_THRESHOLD = 10  # a pixel counts as "ink" if its alpha exceeds this
+
+
+def detect_visual_trend(image_path):
+    """Labels a candlestick chart image by the visual trend it shows: does
+    the staircase of candle bodies rise or fall, left to right, across the
+    10 candles actually drawn in the image.
+
+    This is classical image processing (a least-squares fit of ink-pixel
+    row-position vs column-index), not a trained model -- deliberately, so
+    it can be used as a label source without circularity. Image row 0 is
+    the top, so a negative slope (row decreases left-to-right, i.e. price
+    rises on screen) means "Up"; a positive slope means "Down".
+
+    These source PNGs are RGBA with a fully-transparent background
+    (alpha=0). Converting straight to RGB does not composite onto white --
+    it keeps whatever RGB values happen to be stored under the transparent
+    pixels (here, (0,0,0), i.e. black), which would make the entire
+    background register as "ink" under a brightness threshold. Using the
+    alpha channel directly avoids that.
+
+    Returns (label, slope).
+    """
+    img = Image.open(image_path)
+    if img.mode != "RGBA":
+        img = img.convert("RGBA")
+    arr = np.asarray(img)
+
+    is_ink = arr[:, :, 3] > ALPHA_THRESHOLD  # (H, W) bool, from alpha channel
+
+    cols_with_ink = np.where(is_ink.any(axis=0))[0]
+    if len(cols_with_ink) < 2:
+        return "Up", 0.0  # degenerate/blank image fallback
+
+    row_positions = [np.where(is_ink[:, x])[0].mean() for x in cols_with_ink]
+
+    slope, _intercept = np.polyfit(cols_with_ink, row_positions, 1)
+    label = "Down" if slope > 0 else "Up"
+    return label, float(slope)
+
+
+# ---------------------------------------------------------------------------
 # Feature interpretation / visualization functions
 # ---------------------------------------------------------------------------
 

@@ -4,5 +4,6 @@ __pycache__/
 data/uploads.db
 data/uploads/
 *.log
+nbconvert_log*.txt
 .ipynb_checkpoints/
 .env
