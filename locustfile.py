@@ -24,7 +24,7 @@ class CandlestickUser(HttpUser):
         if not SAMPLE_IMAGES:
             raise RuntimeError(
                 "No sample images found under data/test/. Run locust from the "
-                "project root (crypto_ml_pipeline/) so relative paths resolve."
+                "project root (candlestick-trend-classifier/) so relative paths resolve."
             )
 
     @task(5)

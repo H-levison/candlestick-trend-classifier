@@ -1,4 +1,4 @@
-# Crypto Candlestick Trend Pattern Classifier
+# Candlestick Trend Classifier
 
 An end-to-end ML pipeline that classifies whether a candlestick chart image
 visually shows a rising ("Up") or falling ("Down") trend across the candles
@@ -89,14 +89,14 @@ Streamlit UI (ui/app.py, :8501) ──HTTP──► nginx gateway (:8000) ──
 ## 3. Repository Structure
 
 ```
-crypto_ml_pipeline/
+candlestick-trend-classifier/
 ├── README.md
 ├── requirements.txt
 ├── Dockerfile
 ├── docker-compose.yml
 ├── locustfile.py
 ├── nginx/nginx.conf
-├── notebook/crypto_candlestick_classification.ipynb
+├── notebook/candlestick_trend_classification.ipynb
 ├── scripts/relabel_by_visual_trend.py  # one-time visual-trend relabeling (see Section 1)
 ├── relabel_manifest.csv                # audit log: every image's original vs visual-trend label
 ├── src/
@@ -125,16 +125,16 @@ crypto_ml_pipeline/
 ### Local (no Docker)
 
 ```bash
-cd crypto_ml_pipeline
+cd candlestick-trend-classifier
 python -m venv .venv
 .venv\Scripts\activate          # Windows
 # source .venv/bin/activate     # macOS/Linux
 pip install -r requirements.txt
 
 # Train the initial model (or open the notebook and run all cells)
-jupyter notebook notebook/crypto_candlestick_classification.ipynb
+jupyter notebook notebook/candlestick_trend_classification.ipynb
 
-# Run the API (from the crypto_ml_pipeline/ directory)
+# Run the API (from the candlestick-trend-classifier/ directory)
 uvicorn src.api:app --reload --port 8000
 
 # In a second terminal, run the UI
@@ -149,7 +149,7 @@ for interactive API documentation (Swagger UI).
 ### Docker
 
 ```bash
-cd crypto_ml_pipeline
+cd candlestick-trend-classifier
 docker-compose up --build
 ```
 
@@ -210,7 +210,7 @@ then open `http://localhost:8089`.
 
 ## 7. Notebook
 
-`notebook/crypto_candlestick_classification.ipynb` contains: data loading &
+`notebook/candlestick_trend_classification.ipynb` contains: data loading &
 preprocessing, the 3 feature-interpretation visualizations, model training
 (MobileNetV2 transfer learning, Dropout, Adam, EarlyStopping), full
 evaluation (Accuracy, Loss, Precision, Recall, F1, Confusion Matrix, ROC

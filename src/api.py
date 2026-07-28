@@ -18,7 +18,7 @@ TEST_DIR = "data/test"
 MODEL_PATH = DEFAULT_MODEL_PATH
 VALID_LABELS = {"Up", "Down"}
 
-app = FastAPI(title="Crypto Candlestick Classifier API")
+app = FastAPI(title="Candlestick Trend Classifier API")
 
 app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]

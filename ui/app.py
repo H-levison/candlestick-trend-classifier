@@ -24,8 +24,8 @@ from src.preprocessing import (
 API_URL = os.environ.get("API_URL", "http://localhost:8000")
 TRAIN_DIR = "data/train"
 
-st.set_page_config(page_title="Crypto Candlestick Classifier", layout="wide")
-st.title("Crypto Candlestick Trend Pattern Classifier")
+st.set_page_config(page_title="Candlestick Trend Classifier", layout="wide")
+st.title("Candlestick Trend Classifier")
 st.caption(
     "Classifies whether a candlestick chart image visually shows a rising "
     "(\"Up\") or falling (\"Down\") trend across the candles drawn in the "
