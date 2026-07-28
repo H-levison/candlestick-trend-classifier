@@ -50,6 +50,13 @@ candlestick chart image, classify the trend pattern it visually depicts.
 This is deliberately a description task (what does this chart show), not a
 prediction task (what will the price do next) -- see above for why.
 
+**Final model performance** (MobileNetV2 transfer learning, partial-backbone
+fine-tuning, validation-tuned decision threshold -- see notebook Sections 3
+and 4.1): test accuracy **80.6%**, precision 84.6%, recall 85.3%, F1 85.0%,
+ROC-AUC **0.870**. For contrast, the same architecture scored ROC-AUC 0.436
+(chance) on the original future-return label -- the gap is the actual
+evidence the pivot fixed a genuine no-signal problem, not a modeling issue.
+
 ## 2. Architecture
 
 ```
