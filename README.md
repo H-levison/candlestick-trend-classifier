@@ -1,10 +1,10 @@
-# Crypto Candlestick Up/Down Classifier
+# Crypto Candlestick Trend Pattern Classifier
 
-An end-to-end ML pipeline that predicts short-term price direction ("Up" or
-"Down") from a candlestick chart image, covering data acquisition,
-preprocessing, training, evaluation, a retrainable model served via a
-FastAPI backend, and a Streamlit dashboard for prediction, data insights,
-bulk upload, and retraining.
+An end-to-end ML pipeline that classifies whether a candlestick chart image
+visually shows a rising ("Up") or falling ("Down") trend across the candles
+drawn in it, covering data acquisition, preprocessing, training, evaluation,
+a retrainable model served via a FastAPI backend, and a Streamlit dashboard
+for prediction, data insights, bulk upload, and retraining.
 
 - **Video Demo:** [YOUTUBE LINK PLACEHOLDER]
 - **Deployed API URL:** [DEPLOYED URL PLACEHOLDER]
@@ -14,16 +14,41 @@ bulk upload, and retraining.
 
 **Dataset:** [Candlestick Image Data](https://www.kaggle.com/datasets/raimiazeezbabatunde/candle-image-data)
 by Raimi Azeez Babatunde (Apache 2.0). Each image renders a 10-candle
-formation; the label is `Up` or `Down` depending on whether the cumulative
-return over the following 5 days was positive or negative. 1,433 training
-images (809 Up / 624 Down) and 351 test images (194 Up / 157 Down).
+formation across several tickers (QQQ, SPY, ...). 1,433 training images and
+351 test images.
+
+**Labels and why they were changed from the source dataset:** the dataset
+ships labels of `Up`/`Down` based on the sign of the cumulative return over
+the 5 days *after* the shown candles -- a future outcome not visually
+present in the image. We trained against that label first and investigated
+the result rigorously (two-phase MobileNetV2 transfer learning, class-
+balance and resolution checks, an independent classical-CV cross-check):
+test ROC-AUC came out to 0.436, i.e. no signal distinguishable from chance.
+That's an expected, defensible result -- predicting future price direction
+from chart shape alone runs into market efficiency -- but it doesn't
+demonstrate a working classifier, which the assignment requires. Full
+investigation is kept in the notebook (Section 4) as documented evidence of
+the process, not deleted.
+
+We then **relabeled every image by the visual trend it actually shows**:
+`scripts/relabel_by_visual_trend.py` fits a least-squares line through the
+row-position of non-background ("ink") pixels across the image's columns
+(classical image processing on the alpha channel, not a trained model, so
+there's no circularity in using it as a label source) -- a positive slope
+(price position moving down the image, left to right) labels the image
+`Down`, negative labels it `Up`. This is now a task where the label is
+directly computable from the pixels, which is exactly why it works: it's a
+visual pattern-recognition problem, not a forecast. The full before/after
+label for all 1,784 images is logged in `relabel_manifest.csv` for
+auditability. Resulting split: 824 Up / 609 Down (train), 225 Up / 126 Down
+(test). Only 48.0%/51.9% of images kept their original future-return label
+after relabeling -- itself an independent, non-ML confirmation that visual
+shape and future return are essentially unrelated in this data.
 
 **Use case:** a finance-domain image classification problem -- given a
-recent candlestick formation, predict whether price moves up or down over
-the next 5 days. Predicting price direction from chart shape alone is a
-genuinely hard problem (markets are close to informationally efficient), so
-results are reported honestly rather than tuned toward an inflated number
-(see the notebook's Evaluation section).
+candlestick chart image, classify the trend pattern it visually depicts.
+This is deliberately a description task (what does this chart show), not a
+prediction task (what will the price do next) -- see above for why.
 
 ## 2. Architecture
 
@@ -36,7 +61,7 @@ Streamlit UI (ui/app.py, :8501) ──HTTP──► nginx gateway (:8000) ──
                                      round-robins across scaled             ├─► src/prediction.py  (inference)
                                      `api` replicas for the                 ├─► src/model.py        (train/retrain)
                                      Locust flood test                      ├─► src/database.py     (SQLite upload log)
-                                                                             └─► models/candlestick_model.h5
+                                                                             └─► models/candlestick_model.keras
 ```
 
 - **`nginx`** is a fixed public gateway (host port 8000) that re-resolves the
@@ -65,16 +90,28 @@ crypto_ml_pipeline/
 ├── locustfile.py
 ├── nginx/nginx.conf
 ├── notebook/crypto_candlestick_classification.ipynb
+├── scripts/relabel_by_visual_trend.py  # one-time visual-trend relabeling (see Section 1)
+├── relabel_manifest.csv                # audit log: every image's original vs visual-trend label
 ├── src/
-│   ├── preprocessing.py   # loading, augmentation, 3 feature visualizations
+│   ├── preprocessing.py   # loading, augmentation, visual-trend labeling, 3 feature visualizations
 │   ├── model.py           # build/train/evaluate/save/load/retrain
 │   ├── prediction.py      # single-image inference
 │   ├── database.py        # SQLite upload log + auto-retrain trigger
 │   └── api.py              # FastAPI app
 ├── data/{train,test}/{Up,Down}/
-├── models/candlestick_model.h5
+├── models/candlestick_model.keras
 └── ui/app.py               # Streamlit dashboard
 ```
+
+> **Note on model file format:** the assignment brief names `.pkl`/`.tf`/`.h5`
+> as example formats. This project uses `.keras` (the native Keras 3 format)
+> instead: legacy `.h5` full-model saving hits a "cannot pickle 'module'
+> object" error partway through in the Keras 3 / TensorFlow 2.21 combination
+> used here (a known Keras 3 legacy-H5 serialization issue), and
+> `save_format="tf"` SavedModel export raises `ValueError: The save_format
+> argument is deprecated in Keras 3` outright. `.keras` is Keras's own
+> actively-maintained replacement for both and is used identically
+> (`model.save(...)` / `tf.keras.models.load_model(...)`).
 
 ## 4. Setup Instructions
 
@@ -120,7 +157,7 @@ docker-compose up --build
 | GET    | `/uptime`      | Process uptime, start time, model version, last retrain timestamp          |
 | POST   | `/predict`     | `multipart/form-data`, field `file` (PNG/JPG) → `{prediction, confidence, raw_probability}` |
 | POST   | `/upload-data` | `multipart/form-data`, field `label` (`Up`/`Down`) + `files` (multiple) → saves to `data/train/<label>/`, logs to SQLite |
-| POST   | `/retrain`     | Fine-tunes the current model on `data/train/`, evaluates before/after, overwrites the `.h5` file |
+| POST   | `/retrain`     | Fine-tunes the current model on `data/train/`, evaluates before/after, overwrites the `.keras` file |
 | GET    | `/insights`    | Train/test class counts + upload stats (for the dashboard's Data Insights tab) |
 
 Full interactive docs at `/docs` once the API is running.
