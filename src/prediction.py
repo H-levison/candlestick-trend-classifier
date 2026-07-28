@@ -2,7 +2,7 @@
 
 import os
 
-from src.model import load_model
+from src.model import DECISION_THRESHOLD, load_model
 from src.preprocessing import preprocess_image
 
 # .keras (native Keras 3 format) rather than .h5: legacy H5 full-model saving
@@ -36,15 +36,23 @@ def reload_model(model_path=DEFAULT_MODEL_PATH):
 
 
 def predict_image(image_bytes_or_path, model_path=DEFAULT_MODEL_PATH):
-    """Returns predicted class ("Up"/"Down"), a confidence score (probability
-    of the predicted class, in [0.5, 1]), and the raw sigmoid probability of
-    the "Up" class (in [0, 1])."""
+    """Returns predicted class ("Up"/"Down"), a confidence score, and the
+    raw sigmoid probability of the "Up" class (in [0, 1]). Uses
+    DECISION_THRESHOLD (validation-tuned, see model.py), not a naive 0.5
+    cutoff -- see model.py for why that matters for this model."""
     model = get_model(model_path)
     arr = preprocess_image(image_bytes_or_path)
     raw_probability = float(model.predict(arr, verbose=0)[0][0])
 
-    prediction = CLASS_NAMES[1] if raw_probability >= 0.5 else CLASS_NAMES[0]
-    confidence = raw_probability if raw_probability >= 0.5 else 1.0 - raw_probability
+    is_up = raw_probability >= DECISION_THRESHOLD
+    prediction = CLASS_NAMES[1] if is_up else CLASS_NAMES[0]
+    # Confidence is not just distance from 0.5 anymore since the decision
+    # boundary moved -- express it as distance from the decision threshold,
+    # rescaled into the class's own probability range.
+    if is_up:
+        confidence = (raw_probability - DECISION_THRESHOLD) / (1.0 - DECISION_THRESHOLD) * 0.5 + 0.5
+    else:
+        confidence = (DECISION_THRESHOLD - raw_probability) / DECISION_THRESHOLD * 0.5 + 0.5
 
     return {
         "prediction": prediction,
