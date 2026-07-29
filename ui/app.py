@@ -21,7 +21,7 @@ from src.preprocessing import (
     plot_class_distribution_and_intensity,
 )
 
-API_URL = os.environ.get("API_URL", "http://localhost:8000")
+API_URL = os.environ.get("API_URL", "http://localhost:8000").rstrip("/")
 TRAIN_DIR = "data/train"
 
 st.set_page_config(page_title="Candlestick Trend Classifier", layout="wide")
