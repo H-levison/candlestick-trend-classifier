@@ -6,7 +6,7 @@ drawn in it, covering data acquisition, preprocessing, training, evaluation,
 a retrainable model served via a FastAPI backend, and a Streamlit dashboard
 for prediction, data insights, bulk upload, and retraining.
 
-- **Video Demo:** [YOUTUBE LINK PLACEHOLDER]
+- **Video Demo:** [https://youtu.be/OOkqFpJaSPs]
 - **Deployed API URL:** https://candlestick-trend-classifier.onrender.com/
 - **Deployed UI URL:** https://candlestick-trend-classifier-1.onrender.com/
 
