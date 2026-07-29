@@ -25,6 +25,33 @@ API_URL = os.environ.get("API_URL", "http://localhost:8000").rstrip("/")
 TRAIN_DIR = "data/train"
 
 st.set_page_config(page_title="Candlestick Trend Classifier", layout="wide")
+
+# Cosmetic only -- hides Streamlit's default chrome and restyles built-in
+# components (metrics, tabs) with a plain neutral palette that works in both
+# light and dark themes. No functional/logic changes below this block.
+st.markdown(
+    """
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    .block-container {padding-top: 2.5rem; padding-bottom: 3rem; max-width: 1100px;}
+    h1 {font-weight: 700; letter-spacing: -0.02em;}
+    div[data-testid="stMetric"] {
+        background-color: rgba(127, 127, 127, 0.07);
+        border: 1px solid rgba(127, 127, 127, 0.18);
+        border-radius: 10px;
+        padding: 14px 18px;
+    }
+    .stTabs [data-baseweb="tab-list"] {gap: 4px;}
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 6px 6px 0 0;
+        padding: 8px 18px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 st.title("Candlestick Trend Classifier")
 st.caption(
     "Classifies whether a candlestick chart image visually shows a rising "
@@ -61,20 +88,32 @@ with tab1:
                     resp.raise_for_status()
                     result = resp.json()
                     with col2:
-                        st.metric("Prediction", result["prediction"])
-                        st.progress(
-                            result["confidence"],
-                            text=f"Confidence: {result['confidence'] * 100:.1f}%",
-                        )
-                        st.caption(f"Raw Up-probability: {result['raw_probability']}")
-                        if result.get("is_borderline"):
-                            st.warning(
-                                "Borderline call: this image's probability sits "
-                                "right on the decision boundary. On the test set, "
-                                "predictions this close to the threshold are only "
-                                "~58% accurate (vs. ~83% for confident predictions) "
-                                "-- treat this one with caution."
+                        is_up = result["prediction"] == "Up"
+                        badge_color = "#16a34a" if is_up else "#dc2626"
+                        with st.container(border=True):
+                            st.markdown(
+                                f"""
+                                <span style="background:{badge_color}22; color:{badge_color};
+                                    font-weight:700; padding:6px 16px; border-radius:20px;
+                                    font-size:1.15rem;">
+                                    {result['prediction']}
+                                </span>
+                                """,
+                                unsafe_allow_html=True,
                             )
+                            st.progress(
+                                result["confidence"],
+                                text=f"Confidence: {result['confidence'] * 100:.1f}%",
+                            )
+                            st.caption(f"Raw Up-probability: {result['raw_probability']}")
+                            if result.get("is_borderline"):
+                                st.warning(
+                                    "Borderline call: this image's probability sits "
+                                    "right on the decision boundary. On the test set, "
+                                    "predictions this close to the threshold are only "
+                                    "~58% accurate (vs. ~83% for confident predictions) "
+                                    "-- treat this one with caution."
+                                )
                 except requests.RequestException as e:
                     st.error(f"Prediction request failed: {e}")
 
@@ -85,11 +124,12 @@ with tab2:
     st.subheader("Dataset Insights")
     try:
         insights = requests.get(f"{API_URL}/insights", timeout=10).json()
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Train Up", insights["train"]["Up"])
-        col2.metric("Train Down", insights["train"]["Down"])
-        col3.metric("Test images", insights["test"]["Up"] + insights["test"]["Down"])
-        col4.metric("Pending Uploads", insights["uploads"]["pending_uploads"])
+        with st.container(border=True):
+            col1, col2, col3, col4 = st.columns(4)
+            col1.metric("Train Up", insights["train"]["Up"])
+            col2.metric("Train Down", insights["train"]["Down"])
+            col3.metric("Test images", insights["test"]["Up"] + insights["test"]["Down"])
+            col4.metric("Pending Uploads", insights["uploads"]["pending_uploads"])
     except requests.RequestException as e:
         st.error(f"Could not reach API: {e}")
 
@@ -216,18 +256,19 @@ with tab4:
         health = requests.get(f"{API_URL}/health", timeout=10).json()
         up = requests.get(f"{API_URL}/uptime", timeout=10).json()
 
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Status", health["status"].upper())
-        col2.metric("Model Loaded", "Yes" if health["model_loaded"] else "No")
-        col3.metric("Currently Retraining", "Yes" if health["is_retraining"] else "No")
+        with st.container(border=True):
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Status", health["status"].upper())
+            col2.metric("Model Loaded", "Yes" if health["model_loaded"] else "No")
+            col3.metric("Currently Retraining", "Yes" if health["is_retraining"] else "No")
 
-        uptime_seconds = up["uptime_seconds"]
-        hrs, rem = divmod(uptime_seconds, 3600)
-        mins, secs = divmod(rem, 60)
-        st.metric("API Uptime", f"{int(hrs)}h {int(mins)}m {int(secs)}s")
-        st.write(f"**Started at:** {up['started_at']}")
-        st.write(f"**Model version:** {up['model_version']}")
-        st.write(f"**Last retrained at:** {up['last_trained_at'] or 'Never (initial notebook-trained model)'}")
+            uptime_seconds = up["uptime_seconds"]
+            hrs, rem = divmod(uptime_seconds, 3600)
+            mins, secs = divmod(rem, 60)
+            st.metric("API Uptime", f"{int(hrs)}h {int(mins)}m {int(secs)}s")
+            st.write(f"**Started at:** {up['started_at']}")
+            st.write(f"**Model version:** {up['model_version']}")
+            st.write(f"**Last retrained at:** {up['last_trained_at'] or 'Never (initial notebook-trained model)'}")
     except requests.RequestException as e:
         st.error(f"Could not reach API: {e}")
 
