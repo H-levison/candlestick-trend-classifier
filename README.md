@@ -7,8 +7,8 @@ a retrainable model served via a FastAPI backend, and a Streamlit dashboard
 for prediction, data insights, bulk upload, and retraining.
 
 - **Video Demo:** [YOUTUBE LINK PLACEHOLDER]
-- **Deployed API URL:** [DEPLOYED URL PLACEHOLDER]
-- **Deployed UI URL:** [DEPLOYED URL PLACEHOLDER]
+- **Deployed API URL:** https://candlestick-trend-classifier.onrender.com/
+- **Deployed UI URL:** https://candlestick-trend-classifier-1.onrender.com/
 
 ## 1. Project Overview
 
@@ -200,13 +200,24 @@ then open `http://localhost:8089`.
 
 ### Results
 
-*[PLACEHOLDER — fill in after running the comparison above]*
 
 | API containers | Requests/s | Median latency (ms) | p95 latency (ms) | Failure rate |
 |-----------------|-----------|----------------------|-------------------|--------------|
-| 1               |           |                      |                   |              |
-| 2               |           |                      |                   |              |
-| 4               |           |                      |                   |              |
+| 1               |    15.07  |         4900         |   6000            |     0.00%    |
+| 2               |    13.33  |         5700         |   7400            |     0.00%    |
+| 4               |    13.36  |         5800         |   6500            |     0.00%    |
+
+Throughput stays roughly flat (and latency actually *rises*) as container
+count goes from 1 to 4, rather than improving the way horizontal scaling
+normally would. This was run locally via `docker-compose --scale`, where
+every `api` replica shares the same host machine's CPU cores. Inference
+here is CPU-bound (TensorFlow-cpu, no GPU), so adding more containers on a
+fixed number of physical cores doesn't add real parallel capacity -- it
+just adds scheduling contention between replicas competing for the same
+cores, which is consistent with the latency increase observed. True
+horizontal scaling benefit would require the replicas to run across
+separate hosts/cores, e.g. multiple machines or a cloud autoscaling group,
+not `--scale` on one laptop.
 
 ## 7. Notebook
 
@@ -218,4 +229,22 @@ curve), model persistence, and a single-datapoint inference check.
 
 ## 8. Deployment
 
-*[PLACEHOLDER — cloud platform, deploy steps, and any production evaluation notes go here]*
+Deployed on [Render](https://render.com) as two separate Docker-based Web
+Services built from this repo's `Dockerfile`: one running the FastAPI
+backend (`uvicorn src.api:app`), one running the Streamlit UI (`streamlit
+run ui/app.py`), with the UI's `API_URL` environment variable pointed at
+the API service's Render URL.
+
+- **Port binding:** Render assigns its own port via the `$PORT` environment
+  variable and routes to it; the `Dockerfile`'s `CMD` reads `$PORT` (falling
+  back to 8000 for local `docker-compose`, which sets its own command
+  regardless) so the container listens wherever Render expects.
+- **Memory:** Render's free instance tier caps the container at 512MB RAM,
+  which is tight for a TensorFlow-cpu service (the base import alone
+  commonly uses 300-500MB). `src/preprocessing.py`'s matplotlib/scipy
+  imports (notebook/UI-only) were moved to lazy imports so the API service
+  doesn't pay for them, and TensorFlow's internal thread pools are capped
+  to reduce per-thread overhead -- see `src/model.py`. If the service still
+  OOMs under load, the reliable fix is a paid instance with more RAM, not
+  further micro-optimization of a library with an inherently large
+  footprint.
