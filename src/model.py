@@ -7,6 +7,15 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 
 from src.preprocessing import IMG_SIZE, get_augmentation_layer, load_datasets
 
+# Fewer internal thread pools -- each one carries its own memory overhead,
+# which matters on memory-constrained containers (e.g. Render's free 512MB
+# tier). Must be set before any op runs; safe to no-op if already configured.
+try:
+    tf.config.threading.set_intra_op_parallelism_threads(1)
+    tf.config.threading.set_inter_op_parallelism_threads(1)
+except RuntimeError:
+    pass
+
 # Validation-tuned decision threshold (see notebook Section 4.1: swept 0.05-0.95
 # on the validation set, maximizing accuracy). The default 0.5 sigmoid cutoff
 # is not where this model's probability outputs are actually best calibrated:

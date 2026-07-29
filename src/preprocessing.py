@@ -3,9 +3,13 @@ for the Up/Down candlestick classifier."""
 
 import numpy as np
 from PIL import Image
-import matplotlib.pyplot as plt
-from scipy import ndimage
 import tensorflow as tf
+
+# matplotlib/scipy.ndimage are only used by the plot_* functions below (the
+# notebook and the Streamlit "Data Insights" tab) -- imported lazily inside
+# those functions instead of here, so the API service (which never plots
+# anything) doesn't pay their import cost on top of TensorFlow's, which
+# already pushes close to Render's free-tier 512MB limit on its own.
 
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 32
@@ -146,6 +150,8 @@ def plot_color_channel_dominance(image_paths_by_class, sample_size=150):
     dataset, the Up class should show a visibly higher mean green channel
     and the Down class a higher mean red channel.
     """
+    import matplotlib.pyplot as plt
+
     fig, ax = plt.subplots(figsize=(6, 4))
     means = {}
     for cls, paths in image_paths_by_class.items():
@@ -184,6 +190,9 @@ def plot_edge_detection(image_path):
     Sobel map makes that structure explicit instead of implicit in raw
     pixels, which is what the CNN is effectively learning to detect.
     """
+    import matplotlib.pyplot as plt
+    from scipy import ndimage
+
     img = Image.open(image_path).convert("L").resize(IMG_SIZE)
     arr = np.asarray(img, dtype=np.float32)
 
@@ -211,6 +220,8 @@ def plot_class_distribution_and_intensity(image_paths_by_class, sample_size=150)
     brightness/contrast (which would hint at trivially separable shortcuts
     the model might learn instead of genuine pattern structure).
     """
+    import matplotlib.pyplot as plt
+
     fig, axes = plt.subplots(1, 2, figsize=(10, 4))
 
     classes = list(image_paths_by_class.keys())
