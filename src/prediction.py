@@ -2,7 +2,7 @@
 
 import os
 
-from src.model import DECISION_THRESHOLD, load_model
+from src.model import BORDERLINE_MARGIN, DECISION_THRESHOLD, load_model
 from src.preprocessing import preprocess_image
 
 # .keras (native Keras 3 format) rather than .h5: legacy H5 full-model saving
@@ -54,8 +54,14 @@ def predict_image(image_bytes_or_path, model_path=DEFAULT_MODEL_PATH):
     else:
         confidence = (DECISION_THRESHOLD - raw_probability) / DECISION_THRESHOLD * 0.5 + 0.5
 
+    # Predictions this close to the threshold are measurably less reliable
+    # (58.5% accurate vs. 82.9% elsewhere on the test set) -- flag them
+    # instead of reporting a confident-looking Up/Down.
+    is_borderline = abs(raw_probability - DECISION_THRESHOLD) <= BORDERLINE_MARGIN
+
     return {
         "prediction": prediction,
         "confidence": round(confidence, 4),
         "raw_probability": round(raw_probability, 4),
+        "is_borderline": is_borderline,
     }

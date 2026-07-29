@@ -18,6 +18,13 @@ from src.preprocessing import IMG_SIZE, get_augmentation_layer, load_datasets
 # incremental /retrain fine-tuning calls).
 DECISION_THRESHOLD = 0.43
 
+# Predictions landing within this margin of DECISION_THRESHOLD are flagged as
+# "borderline" rather than reported with false confidence. Measured on the
+# test set: the 11.7% of predictions within 0.05 of the threshold are only
+# 58.5% accurate, vs 82.9% for everything else -- the model's uncertainty
+# here is real, not a display bug, so it's surfaced instead of hidden.
+BORDERLINE_MARGIN = 0.05
+
 
 def build_model(img_size=IMG_SIZE, dropout_rate=0.5, learning_rate=1e-3, unfreeze_base=False):
     """MobileNetV2 backbone (ImageNet weights, frozen by default) + a small

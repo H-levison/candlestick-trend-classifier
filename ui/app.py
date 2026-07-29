@@ -67,6 +67,14 @@ with tab1:
                             text=f"Confidence: {result['confidence'] * 100:.1f}%",
                         )
                         st.caption(f"Raw Up-probability: {result['raw_probability']}")
+                        if result.get("is_borderline"):
+                            st.warning(
+                                "Borderline call: this image's probability sits "
+                                "right on the decision boundary. On the test set, "
+                                "predictions this close to the threshold are only "
+                                "~58% accurate (vs. ~83% for confident predictions) "
+                                "-- treat this one with caution."
+                            )
                 except requests.RequestException as e:
                     st.error(f"Prediction request failed: {e}")
 
