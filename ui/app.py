@@ -21,10 +21,23 @@ from src.preprocessing import (
     plot_class_distribution_and_intensity,
 )
 
-API_URL = os.environ.get("API_URL", "http://localhost:8000").rstrip("/")
+DEFAULT_API_URL = os.environ.get("API_URL", "http://localhost:8000").rstrip("/")
 TRAIN_DIR = "data/train"
 
 st.set_page_config(page_title="Candlestick Trend Classifier", layout="wide")
+
+with st.sidebar:
+    st.markdown("### API Endpoint")
+    st.caption(
+        "Defaults to this deployment's configured API. Override if the "
+        "configured API can't handle a request -- e.g. a memory-constrained "
+        "cloud instance during retraining -- by pointing at a different "
+        "instance instead (only reachable if this UI itself is also running "
+        "on a machine that can reach that address, e.g. locally)."
+    )
+    API_URL = st.text_input(
+        "Target API URL", value=DEFAULT_API_URL, key="api_url_input"
+    ).rstrip("/")
 
 # Cosmetic only -- hides Streamlit's default chrome and restyles built-in
 # components (metrics, tabs) with a plain neutral palette that works in both
